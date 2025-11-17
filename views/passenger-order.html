@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>乘客叫車</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f2f2f2;
+      font-size: 16px;
+    }
+
+    /* 品牌標頭 */
+    .brand-header {
+      background: #053F66;
+      color: white;
+      text-align: center;
+      padding: 14px 0;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .wrap {
+      max-width: 420px;
+      margin: 10px auto;
+      padding: 10px;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 10px 0 12px;
+    }
+
+    form {
+      background: #fff;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }
+
+    .field {
+      margin-bottom: 8px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 3px;
+      font-weight: bold;
+    }
+
+    input, select {
+      padding: 6px 8px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    input, select, button {
+      font-family: inherit;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .row .half {
+      flex: 1;
+    }
+
+    .time-box select {
+      width: 100%;
+    }
+
+    /* 送出叫車按鈕 */
+    .submit-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 17px;
+      margin-top: 8px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+    }
+
+    /* 三欄同一排：航班 / 人數 / 行李 */
+    .field-row-3 {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .field-row-3 .field {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    /* 上車 / 下車：地址 + 小按鈕 + 航廈選單在同一排 */
+    .addr-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .addr-row input {
+      flex: 1;
+    }
+
+    .mini-btn {
+      padding: 6px 10px;
+      font-size: 13px;
+      background: #053F66;
+      color: #fff;
+      border-radius: 6px;
+      border: none;
+      white-space: nowrap;
+    }
+
+    .terminal-select {
+      width: 56px;        /* 更窄一點 */
+      padding: 4px 2px;   /* 邊距再縮小 */
+      font-size: 12px;    /* 字稍微小一點 */
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <div class="brand-header">【立邁集團】 桃園機場接送服務</div>
+
+  <div class="wrap">
+    <h1>貴賓叫車</h1>
+
+    <form method="POST" action="/passenger/order">
+
+      <div class="field">
+        <label>聯絡電話：</label>
+        <input type="text" name="phone" placeholder="電話為顧客ID" required>
+      </div>
+
+      <div class="field">
+        <label>姓名稱呼：</label>
+        <input type="text" name="passengerId" placeholder="姓名稱呼" required>
+      </div>
+
+      <!-- 上車地點 + 接機 + 航廈選單 -->
+      <div class="field">
+        <label>上車地點：</label>
+        <div class="addr-row">
+          <input
+            type="text"
+            id="pickup-input"
+            name="pickup"
+            placeholder="請輸入上車地點"
+            required
+          >
+          <button type="button" class="mini-btn" onclick="openTerminal('pickup')">
+            接機
+          </button>
+          <select id="pickup-terminal" class="terminal-select">
+            <option value="">航廈</option>
+            <option value="1">1航</option>
+            <option value="2">2航</option>
+            <option value="3">3航</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 下車地點 + 送機 + 航廈選單 -->
+      <div class="field">
+        <label>下車地點：</label>
+        <div class="addr-row">
+          <input
+            type="text"
+            id="dropoff-input"
+            name="dropoff"
+            placeholder="請輸入下車地點"
+            required
+          >
+          <button type="button" class="mini-btn" onclick="openTerminal('dropoff')">
+            送機
+          </button>
+          <select id="dropoff-terminal" class="terminal-select">
+            <option value="">航廈</option>
+            <option value="1">1航</option>
+            <option value="2">2航</option>
+            <option value="3">3航</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 日期 + 時/分 -->
+      <div class="field">
+        <label>日期：</label>
+        <select id="pickup-date" name="pickupDate" required></select>
+      </div>
+
+      <div class="row">
+        <div class="field half time-box">
+          <select id="pickup-hour" name="pickupHour" required></select>
+        </div>
+        <div class="field half time-box">
+          <select id="pickup-minute" name="pickupMinute" required></select>
+        </div>
+      </div>
+
+      <!-- 航班 / 人數 / 行李 同一行 -->
+      <div class="field-row-3">
+        <div class="field">
+          <label>航班編號：</label>
+          <input type="text" name="flightNo" placeholder="例如：BR212" required>
+        </div>
+        <div class="field">
+          <label>搭車人數：</label>
+          <select name="peopleCount" required>
+            <option value="">人數</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option>
+            <option>5</option><option>6</option><option>7</option><option>8</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>行李數：</label>
+          <select name="luggageCount" required>
+            <option value="">件數</option>
+            <option>1</option><option>2</option><option>3</option><option>4</option>
+            <option>5</option><option>6</option><option>7</option><option>8</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn">送出叫車</button>
+    </form>
+  </div>
+
+  <script>
+    const dateSelect   = document.getElementById('pickup-date');
+    const hourSelect   = document.getElementById('pickup-hour');
+    const minuteSelect = document.getElementById('pickup-minute');
+
+    function pad(n) {
+      return n.toString().padStart(2, '0');
+    }
+
+    // 日期：未來 7 天
+    const today = new Date();
+    const weekDayNames = ['日', '一', '二', '三', '四', '五', '六'];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+
+      const value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const label = `${d.getMonth() + 1}月${d.getDate()}日(週${weekDayNames[d.getDay()]})`;
+
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      dateSelect.appendChild(opt);
+    }
+
+    // 小時：從 6 點開始排到 23，接著 0~5
+    for (let i = 0; i < 24; i++) {
+      const h = (i + 6) % 24;   // 6,7,...,23,0,1,...,5
+      const opt = document.createElement('option');
+      opt.value = h;
+      opt.textContent = `${h} 點`;
+      hourSelect.appendChild(opt);
+    }
+
+    // 分：00~59
+    for (let m = 0; m < 60; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = `${pad(m)} 分`;
+      minuteSelect.appendChild(opt);
+    }
+
+    // 開啟「航廈」下拉選單
+    function openTerminal(type) {
+      const selectId = type === 'pickup' ? 'pickup-terminal' : 'dropoff-terminal';
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+
+      // 讓手機出現原生下拉（底部滑出）
+      if (sel.showPicker) {
+        sel.showPicker();  // 部分瀏覽器支援
+      } else {
+        sel.focus();
+        sel.click();
+      }
+    }
+
+    // 選航廈 → 自動帶入地址
+    function bindTerminal(type) {
+      const selectId = type === 'pickup' ? 'pickup-terminal' : 'dropoff-terminal';
+      const inputId  = type === 'pickup' ? 'pickup-input'   : 'dropoff-input';
+      const modeText = type === 'pickup' ? '【回國接機】桃園機場 第' : '【出國送機】桃園機場 第';
+
+      const sel = document.getElementById(selectId);
+      const input = document.getElementById(inputId);
+      if (!sel || !input) return;
+
+      sel.addEventListener('change', () => {
+        const v = sel.value;
+        if (!v) return; // 選「航廈」(空白) 就不動
+        input.value = modeText + v + '航廈';
+      });
+    }
+
+  // ========= 輸入電話後，自動載入上一次資料（跨裝置 + 重啟後也記得） =========
+  (function setupLoadByPhone() {
+    const phoneInput   = document.querySelector('input[name="phone"]');
+    const nameInput    = document.querySelector('input[name="passengerId"]');
+    const pickupInput  = document.getElementById('pickup-input');
+    const dropoffInput = document.getElementById('dropoff-input');
+
+    if (!phoneInput || !nameInput || !pickupInput || !dropoffInput) return;
+
+    async function loadLastInfo() {
+      const phone = phoneInput.value.trim();
+      if (!phone) return;
+
+      try {
+        const res = await fetch('/api/last-info?phone=' + encodeURIComponent(phone));
+        const data = await res.json();
+        if (!data) return;
+
+        if (data.passengerId) nameInput.value    = data.passengerId;
+        if (data.pickup)      pickupInput.value  = data.pickup;
+        if (data.dropoff)     dropoffInput.value = data.dropoff;
+        // phone 本身就已經輸入了，不特別覆蓋
+      } catch (e) {
+        console.warn('載入上次資料失敗', e);
+      }
+    }
+
+    // 電話輸入完（change / blur）時載入
+    phoneInput.addEventListener('change', loadLastInfo);
+    phoneInput.addEventListener('blur', loadLastInfo);
+  })();
+
+    bindTerminal('pickup');
+    bindTerminal('dropoff');
+  </script>
+
+</body>
+</html>

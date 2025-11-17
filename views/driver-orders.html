@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>  
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>司機端派車頁面</title>
+
+<style>
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+        background: #f3f4f6;
+        margin: 0;
+        padding: 12px;
+    }
+
+    .brand-header {
+      background: #053F66;
+      color: white;
+      text-align: center;
+      padding: 14px 0;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    /* ===== 司機資訊 ===== */
+    .driver-box {
+        background: white;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    }
+
+    .driver-grid{
+        font-size:15px;
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        row-gap:6px;
+    }
+
+    .driver-edit{
+        display:none;
+        flex-wrap:wrap;
+        gap:6px;
+        padding:8px;
+        background:white;
+        border-radius:10px;
+        margin-bottom:12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .driver-edit input{
+        flex:1;
+        min-width:140px;
+        padding:6px 8px;
+        font-size:14px;
+        border:1px solid #ccc;
+        border-radius:6px;
+    }
+
+    /* ===== 訂單卡片 ===== */
+    .order-card {
+        background: white;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        border: solid 1px #e5e7eb;
+    }
+
+    .order-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .order-time {
+        font-size: 22px;
+        font-weight: 700;
+        color: #111;
+        min-width: 60px;
+    }
+
+    .order-btn {
+        padding: 6px 10px;
+        background: #16a34a;
+        color: white;
+        font-size: 14px;
+        border: none;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+
+    .order-route {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 4px;
+        font-size: 15px;
+        color: #222;
+        line-height: 1.35;
+    }
+
+    .order-sub {
+        font-size: 14px;
+        color: #444;
+        line-height: 1.35;
+        margin-left: 4px;
+    }
+
+    .section-title {
+        margin: 12px 0 6px;
+        font-size: 15px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .day-sep {
+        text-align:center;
+        margin:20px 0 8px;
+        color:#666;
+        font-size:15px;
+    }
+
+</style>
+
+</head>
+<body>
+
+<div class="brand-header">【立邁集團】 桃機接送服務（車隊）</div>
+
+<!-- 顯示版 -->
+<div id="driver-view" class="driver-box">
+    <div class="driver-grid">
+        <div>姓名：<span id="view-name"></span></div>
+        <div style="text-align:right;">車號：<span id="view-carno"></span></div>
+        <div>車型：<span id="view-cartype"></span></div>
+        <div style="text-align:right;">手機：<span id="view-phone"></span></div>
+    </div>
+
+    <button id="editBtn" style="
+        padding:4px 10px;
+        background:rgba(0,0,0,0.08);
+        border:1px solid rgba(0,0,0,0.12);
+        border-radius:6px;
+        font-size:13px;">
+        修改
+    </button>
+</div>
+
+<!-- 編輯版 -->
+<div id="driver-edit" class="driver-edit">
+    <input id="driverPhone" placeholder="手機 *必填">
+    <input id="driverName" placeholder="姓名">
+    <input id="carNo" placeholder="車號">
+    <input id="carType" placeholder="車型">
+    <button onclick="saveDriver()">儲存</button>
+</div>
+
+<h2 id="todayTitle">所有訂單</h2>
+<div id="order-container"></div>
+
+<script>
+
+/* ===== 綁定 ===== */
+const driverPhone = document.getElementById("driverPhone");
+const driverName  = document.getElementById("driverName");
+const carNo       = document.getElementById("carNo");
+const carType     = document.getElementById("carType");
+
+/* ===== 司機顯示版 ===== */
+function showViewMode(data){
+    document.getElementById("driver-view").style.display = "flex";
+    document.getElementById("driver-edit").style.display = "none";
+
+    document.getElementById("view-phone").innerText  = data.driverPhone || "";
+    document.getElementById("view-name").innerText   = data.driverName || "";
+    document.getElementById("view-carno").innerText  = data.carNo || "";
+    document.getElementById("view-cartype").innerText= data.carType || "";
+}
+
+/* ===== 編輯模式 ===== */
+function showEditMode(){
+    document.getElementById("driver-view").style.display = "none";
+    document.getElementById("driver-edit").style.display = "flex";
+}
+document.getElementById("editBtn").onclick = showEditMode;
+
+/* ===== 航廈簡化 ===== */
+function simplifyTerminal(text){
+    if (!text) return "";
+    return text
+        .replace("桃園機場","桃機")
+        .replace("第1航廈","T1")
+        .replace("第2航廈","T2")
+}
+
+/* ===== 儲存司機資訊 ===== */
+async function saveDriver(){
+    const phone = driverPhone.value.trim();
+    if (!phone) return alert("請輸入手機");
+
+    const data = {
+        driverPhone: phone,
+        driverName : driverName.value,
+        carNo      : carNo.value,
+        carType    : carType.value
+    };
+
+    await fetch("/api/driver-info",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(data)
+    });
+
+    localStorage.setItem("lastDriverPhone", phone);
+    showViewMode(data);
+}
+
+/* ===== 載入司機資料 ===== */
+async function loadDriver(){
+    const phone = localStorage.getItem("lastDriverPhone");
+    if (!phone) return;
+
+    driverPhone.value = phone;
+
+    const res = await fetch(`/api/driver-info?phone=${phone}`);
+    const data = await res.json();
+    if (data) showViewMode(data);
+}
+
+/* ===== 依接機 / 送機分類 ===== */
+function getType(o){
+    const t = `${o.pickup} ${o.dropoff}`;
+    if (t.includes("回國接機")) return "arrival";
+    if (t.includes("出國送機")) return "departure";
+    if (o.dropoff.includes("機場")) return "departure";
+    if (o.pickup.includes("機場")) return "arrival";
+    return "departure";
+}
+
+/* ===== 按鈕：接這趟 ===== */
+async function askForOrder(id){
+    const driver = document.getElementById("view-name").innerText.trim();
+    if (!driver) return alert("請先填寫上方司機資料");
+
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerText = "回報中…";
+    btn.style.background = "#9ca3af";
+
+    await fetch("/driver/want",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ id, driver })
+    });
+
+    await fetch("/driver/take",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ id })
+    });
+
+    btn.innerText = "✔ 待顧客資訊";
+    btn.style.background = "#16a34a";
+}
+
+
+/* ===== 生成卡片 ===== */
+function createOrderCard(o){
+    const taken = (o.status === "taken");
+
+    return `
+    <div class="order-card">
+        <div class="order-head">
+            <div class="order-time">${o.time.slice(11,16)}</div>
+            <button class="order-btn"
+                onclick='askForOrder(${o.id})'
+                style="background:${taken ? "#16a34a" : "#16a34a"};">
+                ${taken ? "✔ 待顧客資訊" : "接這趟"}
+            </button>
+        </div>
+        <div class="order-route">
+            <div>${simplifyTerminal(o.pickup)}</div>
+            <div>→ ${simplifyTerminal(o.dropoff)}</div>
+        </div>
+        <div class="order-sub">
+            旅客：${o.passengerId}（${o.peopleCount}人｜行李${o.luggageCount}）
+        </div>
+        ${o.flightNo ? `<div class="order-sub">航班：${o.flightNo}</div>` : ""}
+    </div>`;
+}
+
+
+
+/* ===== 渲染訂單（所有日期） ===== */
+function renderOrders(list){
+
+    const groups = {};
+    list.forEach(o=>{
+        const d = o.time.slice(0,10);
+        if (!groups[d]) groups[d]=[];
+        groups[d].push(o);
+    });
+
+    let html = "";
+    Object.keys(groups).sort().forEach(date=>{
+        const day = groups[date];
+        const arr=[], dep=[];
+        day.forEach(o=>{
+            (getType(o)==="arrival"?arr:dep).push(o);
+        });
+
+        arr.sort((a,b)=>a.time.localeCompare(b.time));
+        dep.sort((a,b)=>a.time.localeCompare(b.time));
+
+        html += `
+        <div class="day-sep">── ${date} ──</div>
+        <div class="section-title">接機</div>
+        ${arr.map(createOrderCard).join("")}
+        <div class="section-title">送機</div>
+        ${dep.map(createOrderCard).join("")}
+        `;
+    });
+
+    document.getElementById("order-container").innerHTML = html;
+}
+
+/* ===== 載入訂單 ===== */
+async function loadRides(){
+    const res = await fetch("/dispatcher/orders");
+    const data = await res.json();
+    renderOrders(data);
+}
+
+/* ===== 啟動 ===== */
+loadDriver();
+loadRides();
+setInterval(loadRides,3000);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>派車員後台</title>
+</head>
+<body>
+  <h1>派車員後台 - 訂單列表</h1>
+
+  <table border="1" cellpadding="5">
+    <thead>
+      <tr>
+        <th>項次</th>
+        <th>乘客ID</th>
+        <th>上車地點</th>
+        <th>下車地點</th>
+        <th>時間</th>
+        <th>電話</th>
+        <th>航班</th>
+        <th>人數</th>
+        <th>行李</th>
+        <th>狀態</th>
+        <th>想接的司機</th>
+        <th>指派</th>
+      </tr>
+    </thead>
+    <tbody id="orders-body"></tbody>
+  </table>
+
+  <script>
+    async function loadOrders() {
+      const res = await fetch('/dispatcher/orders');
+      const data = await res.json();
+
+      const tbody = document.getElementById('orders-body');
+      tbody.innerHTML = '';
+
+      data.forEach((order, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${order.passengerId || ''}</td>
+          <td>${order.pickup}</td>
+          <td>${order.dropoff}</td>
+          <td>${order.time}</td>
+          <td>${order.phone}</td>
+          <td>${order.flightNo}</td>
+          <td>${order.peopleCount}</td>
+          <td>${order.luggageCount}</td>
+          <td>${order.status}</td>
+          <td>${(order.wants || []).join(', ')}</td>
+          <td><button onclick="assign(${order.id})">指派</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+    }
+
+    async function assign(id) {
+      const driver = prompt("指派給哪位司機？");
+      if (!driver) return;
+
+      await fetch('/dispatcher/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, driver })
+      });
+
+      alert('指派成功！');
+      loadOrders();
+    }
+
+    loadOrders();
+    setInterval(loadOrders, 5000);
+  </script>
+</body>
+</html>
