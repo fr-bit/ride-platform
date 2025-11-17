@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // 用來存顧客常用資料的檔案 和 用來存司機資料的檔案
 const PROFILE_FILE = path.join(__dirname, 'customerProfiles.json');
@@ -362,5 +362,6 @@ document.getElementById('copyBtn').onclick = () => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
+
